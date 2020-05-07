@@ -3,20 +3,6 @@ import var CommonCrypto.CC_MD5_DIGEST_LENGTH
 import func CommonCrypto.CC_MD5
 import typealias CommonCrypto.CC_LONG
 
-struct Entry: Codable {
-    let key: String
-    let value: Data
-    let expirationDate: Date
-    let createdDate: Date
-    
-    init(key: String, value: Data, expirationDate: Date, createdDate: Date) {
-        self.key = key
-        self.value = value
-        self.expirationDate = expirationDate
-        self.createdDate = createdDate
-    }
-}
-
 class CacheLib {
     
     private var urlString = ""
@@ -24,14 +10,12 @@ class CacheLib {
     private var expirationDate: Date
     private var nameDirectory = "PPL_Cache"
     private var key = ""
-    private var isLog = false
-    private var path: String?
+    private var isLogingEnabled = false
     
-    init(entryLifetime: TimeInterval, isLog: Bool, path: String? = nil) {
+    init(entryLifetime: TimeInterval, isLogingEnabled: Bool) {
         let expirationDate = Calendar.current.date(byAdding: .second, value: Int(entryLifetime), to: Date())
         self.expirationDate = expirationDate ?? Date()
-        self.isLog = isLog
-        self.path = path
+        self.isLogingEnabled = isLogingEnabled
     }
     
     func cachedResponse(for request: URLRequest) -> Data? {
@@ -41,15 +25,20 @@ class CacheLib {
         
         guard let file = findFileInCache() else { return nil }
         
-        let data = FileManager.default.decodeJSON(type: Entry.self, with: file, path: path, isLog: isLog)
-        return data?.value
+        let data = FileManager.default.contents(atPath: file.path)
+        return data
     }
     
     func storeCachedResponse(data: Data) {
-        value = data
-        let entry = createEntry()
-        guard let filePath = FileManager.default.getFileFromCacheDirectory(nameDirectory, with: getNameFile(), isLog: isLog) else { return }
-        FileManager.default.saveJSONFile(entry, jsonFilePath: filePath, isLog: isLog)
+        guard let filePath = FileManager.default.getFileFromCacheDirectory(nameDirectory, with: getNameFile(), isLog: isLogingEnabled) else { return }
+        
+        do {
+            try data.write(to: filePath)
+        } catch {
+            if isLogingEnabled {
+                print(error)
+            }
+        }
     }
     
     func removeAllCachedResponses() {
@@ -76,12 +65,9 @@ extension CacheLib {
         return nil
     }
     
-    private func createEntry() -> Entry {
-        return Entry(key: key, value: value, expirationDate: expirationDate, createdDate: Date())
-    }
     
     private func getFileInCache() -> URL?{
-        return FileManager.default.getFileFromCacheDirectory(nameDirectory, with: getNameFile(), isLog: isLog)
+        return FileManager.default.getFileFromCacheDirectory(nameDirectory, with: getNameFile(), isLog: isLogingEnabled)
     }
     
     private func getNameFile() -> String {
@@ -121,7 +107,7 @@ extension CacheLib {
             dateFromNameFile = String(substring)
             
             if let expDate = dateFromNameFile.toDate(dateFormat: "yyyyMMddHHmmss"), expDate <= date {
-                FileManager.default.deleteFile(filePath: file, isLog: isLog)
+                FileManager.default.deleteFile(filePath: file, isLog: isLogingEnabled)
             }
         }
     }

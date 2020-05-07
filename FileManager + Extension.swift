@@ -57,42 +57,6 @@ extension FileManager {
         return filePath
     }
     
-    func decodeJSON<T: Decodable>(type: T.Type, with jsonFilePath: URL, path: String? = nil, isLog: Bool = false) -> T? {
-        
-        var jsonData = Data()
-        do {
-            jsonData = try Data(contentsOf: jsonFilePath)
-        } catch {
-            if isLog {
-                print(error)
-            }
-            return nil
-        }
-        
-        let decoder = JSONDecoder()
-        do {
-            let decoded = try decoder.decode(T.self, from: jsonData, path: path)
-            return decoded
-        } catch {
-            if isLog {
-                print(error)
-            }
-            return nil
-        }
-    }
-    
-    func saveJSONFile<T: Encodable>(_ data: T, jsonFilePath: URL, isLog: Bool = false) {
-        do {
-            let encodedData = try JSONEncoder().encode(data)
-            try encodedData.write(to: jsonFilePath)
-        }
-        catch {
-            if isLog {
-                print("PPL_Failed to write JSON data: \(error.localizedDescription) ", error)
-            }
-        }
-    }
-    
     func urls(for directory: FileManager.SearchPathDirectory, nameDirectory: String, skipsHiddenFiles: Bool = true ) -> [URL]? {
         let directoryURL = getDirectoryPath(typeDirecory: directory, nameDirectory: nameDirectory)
         let fileURLs = try? contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil, options: skipsHiddenFiles ? .skipsHiddenFiles : [] )
